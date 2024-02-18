@@ -9,7 +9,7 @@ import os
 
 dir_path = r'U:\225'  # 填写你的.rar文件路径
 cache_path = "D:\Cache"
-r_path = r"U:\[BoBoSocks袜啵啵]"
+r_path = r"T:\[LeeheeExpress]"
 password = 'www.5280bt.net'  # 填写RAR文件的密码
 
 
@@ -142,8 +142,8 @@ def unzip_dir(dir_path,password):
                     shutil.rmtree(directory_path)
                 os.remove(zip_file_path)
 
-        print("正在删除" + sevenz_file)
-        os.remove(sevenz_file)
+        print("正在删除" + sevenz_file_path)
+        os.remove(sevenz_file_path)
 
 
 
