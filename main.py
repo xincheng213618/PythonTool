@@ -7,8 +7,11 @@ import zipfile
 import py7zr
 import os
 
+dir_path = r'U:\225'  # 填写你的.rar文件路径
 cache_path = "D:\Cache"
 r_path = r"U:\[BoBoSocks袜啵啵]"
+password = 'www.5280bt.net'  # 填写RAR文件的密码
+
 
 def extract_rar_with_password(rar_path,file_directory, password):
     with rarfile.RarFile(rar_path) as rf:
@@ -49,7 +52,7 @@ def zip_with_winrar_all(folder_path):
     folder_name = os.path.basename(folder_path)
 
     if os.path.exists(r_path):
-        rar_file_name = os.path.join(os.path.dirname(r_path), f"{folder_name}.rar");
+        rar_file_name = os.path.join(r_path, f"{folder_name}.rar");
     else:
         rar_file_name = os.path.join(os.path.dirname(folder_path), f"{folder_name}.rar");
 
@@ -160,10 +163,6 @@ def unzip_dir(dir_path,password):
 
 # 按间距中的绿色按钮以运行脚本。
 if __name__ == '__main__':
-    dir_path = r'U:\225'  # 填写你的.rar文件路径
-
-    password = 'www.5280bt.net'  # 填写RAR文件的密码
-
     unzip_dir(dir_path, password)
     entries = os.listdir(dir_path)
     directories = [entry for entry in entries if os.path.isdir(os.path.join(dir_path, entry))]
