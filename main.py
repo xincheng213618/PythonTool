@@ -8,6 +8,7 @@ import py7zr
 import os
 
 cache_path = "D:\Cache"
+r_path = r"U:\[BoBoSocks袜啵啵]"
 
 def extract_rar_with_password(rar_path,file_directory, password):
     with rarfile.RarFile(rar_path) as rf:
@@ -47,9 +48,12 @@ def zip_with_winrar_all(folder_path):
     # 从文件夹路径获取文件夹名称
     folder_name = os.path.basename(folder_path)
 
+    if os.path.exists(r_path):
+        rar_file_name = os.path.join(os.path.dirname(r_path), f"{folder_name}.rar");
+    else:
+        rar_file_name = os.path.join(os.path.dirname(folder_path), f"{folder_name}.rar");
 
     # 压缩文件的名称与文件夹名称相同
-    rar_file_name =os.path.join( os.path.dirname(folder_path) ,f"{folder_name}.rar") ;
 
     # 完整的WinRAR命令
     command = [r'C:\Program Files\WinRAR\WinRAR.exe', 'a', '-ibck', '-r','-ep1' ,rar_file_name, folder_path]
@@ -93,26 +97,27 @@ def unzip_dir(dir_path,password):
     # 遍历所有.7z文件并解压
     for sevenz_file in sevenz_files:
         sevenz_file_path = os.path.join(dir_path, sevenz_file)
-        print(sevenz_file_path)
         if os.path.exists(cache_path):
+            print("正在解压" + sevenz_file_path + "到" +cache_path)
             extract_7z_with_password(sevenz_file_path, cache_path, password)
             all_items1 = os.listdir(cache_path)
             zip_files = [item for item in all_items1 if item.endswith('.zip')]
             for zip_file in zip_files:
                 zip_file_path = os.path.join(cache_path, zip_file)
-                print(zip_file_path)
+                print("正在解压" + zip_file_path)
                 extract_with_winrar(zip_file_path, password)
                 # 获取当前目录下的所有条目
                 entries = os.listdir(cache_path)
 
-                directories = [entry for entry in entries if os.path.isdir(os.path.join(dir_path, entry))]
+                directories = [entry for entry in entries if os.path.isdir(os.path.join(cache_path, entry))]
                 for directory in directories:
                     directory_path = os.path.join(cache_path, directory)
+                    print(directory_path)
                     removesomefile(directory_path)
                     zip_with_winrar_all(directory_path);
                     shutil.rmtree(directory_path)
+                print("正在删除" + zip_file_path)
                 os.remove(zip_file_path)
-
         else:
             file_directory = os.path.dirname(sevenz_file_path)
             extract_7z_with_password(sevenz_file_path,file_directory, password)
@@ -134,6 +139,9 @@ def unzip_dir(dir_path,password):
                     shutil.rmtree(directory_path)
                 os.remove(zip_file_path)
 
+        print("正在删除" + sevenz_file)
+        os.remove(sevenz_file)
+
 
 
 
@@ -153,6 +161,7 @@ def unzip_dir(dir_path,password):
 # 按间距中的绿色按钮以运行脚本。
 if __name__ == '__main__':
     dir_path = r'U:\225'  # 填写你的.rar文件路径
+
     password = 'www.5280bt.net'  # 填写RAR文件的密码
 
     unzip_dir(dir_path, password)
