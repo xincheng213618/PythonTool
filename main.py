@@ -175,6 +175,9 @@ if __name__ == '__main__':
     parser.add_argument('-dir_path',"-d",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹\341",
                         help='The path to the directory.')
 
+    parser.add_argument('-r_path',"-r",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹 (3)",
+                        help='The path to the directory.')
+
     # 解析命令行参数
     args = parser.parse_args()
 
