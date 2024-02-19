@@ -7,9 +7,9 @@ import zipfile
 import py7zr
 import os
 
-dir_path = r'U:\225'  # 填写你的.rar文件路径
+dir_path = r'H:\新建文件夹\341'  # 填写你的.rar文件路径
 cache_path = "D:\Cache"
-r_path = r"T:\[LeeheeExpress]"
+r_path = r"H:\新建文件夹 (3)"
 password = 'www.5280bt.net'  # 填写RAR文件的密码
 
 
@@ -118,7 +118,8 @@ def unzip_dir(dir_path,password):
                     print(directory_path)
                     removesomefile(directory_path)
                     zip_with_winrar_all(directory_path);
-                    shutil.rmtree(directory_path)
+                    print("正在删除" + directory_path)
+                    shutil.rmtree(directory_path,ignore_errors=True)
                 print("正在删除" + zip_file_path)
                 os.remove(zip_file_path)
         else:
@@ -161,8 +162,40 @@ def unzip_dir(dir_path,password):
         #         file_directory = cache_path
         #     extract_rar_with_password(rar_file_path,file_directory,password)
 
+import argparse
 # 按间距中的绿色按钮以运行脚本。
 if __name__ == '__main__':
+
+    # 创建 ArgumentParser 对象
+    parser = argparse.ArgumentParser(description="Process a directory path.")
+
+    # 添加 dir_path 参数
+    # nargs='?' 表示参数是可选的，const 表示如果没有提供参数，则使用这个默认值
+    # type=lambda x: 是一个检查路径是否存在的函数
+    parser.add_argument('-dir_path',"-d",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹\341",
+                        help='The path to the directory.')
+
+    # 解析命令行参数
+    args = parser.parse_args()
+
+    dir_path = args.dir_path
+    print("dir_path" + str(dir_path))
+    if not os.path.exists(cache_path):
+        cache_path = os.path.join(os.path.expanduser("~"), 'Desktop') +"Cache"
+        if not os.path.exists(cache_path):
+            os.makedirs(cache_path)
+
+    cache_path =os.path.join(cache_path,os.path.basename(dir_path))
+    if not os.path.exists(cache_path):  # 判断是否存在文件夹如果不存在则创建为文件夹
+        os.makedirs(cache_path)  # makedirs 创建文件时如果路径不存在会创建这个路径
+
+    print("cache_path:"+cache_path)
+
+    r_path =os.path.join(r_path,os.path.basename(dir_path))
+    if not os.path.exists(r_path): os.makedirs(r_path)
+
+    print("r_path:"+r_path)
+
     unzip_dir(dir_path, password)
     entries = os.listdir(dir_path)
     directories = [entry for entry in entries if os.path.isdir(os.path.join(dir_path, entry))]
@@ -170,6 +203,10 @@ if __name__ == '__main__':
         directory_path = os.path.join(dir_path, directory)
         print(directory_path)
         unzip_dir(directory_path, password)
+
+    print("解压完成，正在清理缓存文件夹:" +cache_path)
+    os.remove(cache_path)
+
 
 
 
