@@ -83,10 +83,11 @@ def extract_with_winrar(zip_file_path, password):
 def removesomefile(dir_path):
     for root, dirs, files in os.walk(dir_path):
         for file in files:
+            file_path = os.path.join(root, file)
+            os.chmod(file_path, stat.S_IWUSR)
             # 检查文件扩展名是否为.url或.txt
             if file.endswith('.url') or file.endswith('.txt'):
                 # 构造文件的完整路径
-                file_path = os.path.join(root, file)
                 # 删除文件
                 os.remove(file_path)
                 print(f"Deleted: {file_path}")
@@ -116,9 +117,12 @@ def unzip_dir(dir_path,password):
                     directory_path = os.path.join(cache_path, directory)
                     print(directory_path)
                     removesomefile(directory_path)
+                    
+                    
+                    
                     zip_with_winrar_all(directory_path);
                     print("正在删除" + directory_path)
-                    shutil.rmtree(directory_path,ignore_errors=True)
+                    shutil.rmtree(directory_path)
                 print("正在删除" + zip_file_path)
                 os.remove(zip_file_path)
         else:
