@@ -12,7 +12,6 @@ cache_path = "D:\Cache"
 r_path = r"H:\新建文件夹 (3)"
 password = 'www.5280bt.net'  # 填写RAR文件的密码
 
-
 def extract_rar_with_password(rar_path,file_directory, password):
     with rarfile.RarFile(rar_path) as rf:
         rf.setpassword(password)
@@ -162,6 +161,9 @@ def unzip_dir(dir_path,password):
         #         file_directory = cache_path
         #     extract_rar_with_password(rar_file_path,file_directory,password)
 
+
+
+
 import argparse
 # 按间距中的绿色按钮以运行脚本。
 if __name__ == '__main__':
@@ -172,7 +174,7 @@ if __name__ == '__main__':
     # 添加 dir_path 参数
     # nargs='?' 表示参数是可选的，const 表示如果没有提供参数，则使用这个默认值
     # type=lambda x: 是一个检查路径是否存在的函数
-    parser.add_argument('-dir_path',"-d",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹\341",
+    parser.add_argument('-dir_path',"-d",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹\319",
                         help='The path to the directory.')
 
     parser.add_argument('-r_path',"-r",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹 (3)",
@@ -184,7 +186,7 @@ if __name__ == '__main__':
     dir_path = args.dir_path
     print("dir_path" + str(dir_path))
     if not os.path.exists(cache_path):
-        cache_path = os.path.join(os.path.expanduser("~"), 'Desktop') +"Cache"
+        cache_path = os.path.join(os.path.expanduser("~"), 'Desktop') +"\Cache"
         if not os.path.exists(cache_path):
             os.makedirs(cache_path)
 
@@ -194,8 +196,9 @@ if __name__ == '__main__':
 
     print("cache_path:"+cache_path)
 
-    r_path =os.path.join(r_path,os.path.basename(dir_path))
-    if not os.path.exists(r_path): os.makedirs(r_path)
+    r_path = args.r_path
+    # r_path =os.path.join(r_path,os.path.basename(dir_path))
+    # if not os.path.exists(r_path): os.makedirs(r_path)
 
     print("r_path:"+r_path)
 
@@ -208,7 +211,10 @@ if __name__ == '__main__':
         unzip_dir(directory_path, password)
 
     print("解压完成，正在清理缓存文件夹:" +cache_path)
-    os.remove(cache_path)
+    shutil.rmtree(cache_path)
+    print("解压完成，正在清理wancheg文件夹:" +dir_path)
+    shutil.rmtree(dir_path)
+
 
 
 
