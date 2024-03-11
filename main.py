@@ -82,6 +82,7 @@ def extract_with_winrar(zip_file_path, password):
 # 使用示例
 
 def removesomefile(dir_path):
+    os.chmod(dir_path, stat.S_IWUSR)
     for root, dirs, files in os.walk(dir_path):
         for file in files:
             file_path = os.path.join(root, file)
