@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('-dir_path',"-d",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹\319",
                         help='The path to the directory.')
 
-    parser.add_argument('-r_path',"-r",type=lambda x: os.path.isdir(x) and x or parser.error("Directory does not exist."), default=r"H:\新建文件夹 (3)",
+    parser.add_argument('-r_path',"-r", default=r"H:\新建文件夹 (3)",
                         help='The path to the directory.')
 
     # 解析命令行参数
@@ -203,10 +203,11 @@ if __name__ == '__main__':
     print("cache_path:"+cache_path)
 
     r_path = args.r_path
-    # r_path =os.path.join(r_path,os.path.basename(dir_path))
-    # if not os.path.exists(r_path): os.makedirs(r_path)
-
     print("r_path:"+r_path)
+    # r_path =os.path.join(r_path,os.path.basename(dir_path))
+    if not os.path.exists(r_path):
+        os.makedirs(r_path)
+
 
     unzip_dir(dir_path, password)
     entries = os.listdir(dir_path)
