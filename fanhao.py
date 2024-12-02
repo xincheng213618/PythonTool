@@ -10,19 +10,26 @@ import glob
 import time
 
 def find_alpha_num_combinations(s):
-    pattern = r"(\d{6}-\d{3})"
-    matches = re.findall(pattern, s.lower())
+    # Remove everything before and including '@'
+    s = re.sub(r'.*@', '', s)
+
+    # Pattern for 6 digits followed by a dash and 3 digits
+    pattern1 = r"(\d{6}-\d{3})"
+    matches = re.findall(pattern1, s.lower())
     if len(matches) == 1:
         return matches
 
-    pattern = r"(FC2-)(?:PPV-)(\d+)"
-    match = re.search(pattern, s.lower())
+    # Pattern for FC2-PPV- or FC2 PPV followed by digits
+    pattern2 = r"(FC2)[\s-]*(PPV)[\s-]*(\d+)"
+    match = re.search(pattern2, s.lower())
     if match:
-        result = match.group(1) + match.group(2)
+        result = match.group(1) + '-' + match.group(2) + '-' + match.group(3)
         return [result]
 
-    matches = re.findall(r'([A-Za-z]+)[^\w]*(\d+)', s)
-    separated = ['{}-{}'.format(match[0], match[1]) for match in matches]
+    # Pattern for letters followed by numbers, separated by non-word characters
+    pattern3 = r'([A-Za-z]+)[^\w]*(\d+)'
+    matches = re.findall(pattern3, s)
+    separated = ['{}-{}'.format(match[0], str(int(match[1]))) for match in matches]
 
     return separated
 
@@ -107,7 +114,6 @@ if not os.path.exists(extera_path):
 
 for item in fanhao_dir_paths:
     full_path = os.path.join(dir_path, item)
-
     if os.path.isfile(full_path):
         if full_path.lower().endswith('.mp4'):
             folder_name = os.path.splitext(item)[0]
@@ -125,18 +131,22 @@ for item in fanhao_dir_paths:
     if mark is None:
         break
 
+
     for letter in mark:
-        if letter in ["SIS-001", "hhd-800", "com-300"]:
+        if letter in [ "kfa-11","SIS-001", "hhd-800", "com-300","PrestigePremium"]:
             print(f"过滤 {letter}")
             continue
         print(f"entries：{full_path}  mark：{mark}")
         time.sleep(5)
-        videoinfo = javdb.getletterinfo(letter)
+        try:
+            videoinfo = javdb.getletterinfo(letter)
+        except:
+            print("超时，等待中")
+            time.sleep(60)
+            videoinfo = javdb.getletterinfo(letter)
         print(videoinfo)
 
         if not videoinfo:
-            print(f"videoinfo为空，移动文件夹 {full_path} 到 {extera_path}")
-            shutil.move(full_path, os.path.join(extera_path, item))
             continue
 
         video_title = videoinfo.get("video_title")
@@ -188,3 +198,7 @@ for item in fanhao_dir_paths:
             for key, value in videoinfo.items():
                 file.write(f"{key}: {value}\n")
         print("信息已写入info.txt文件。")
+
+    if os.path.exists(full_path):
+        print(f"没有成功整理，移动文件夹 {full_path} 到extra {extera_path}")
+        shutil.move(full_path, os.path.join(extera_path, item))

@@ -15,7 +15,10 @@ headers = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
     "cookie": javlibrary_cookie
 }
-
+import re
+def normalize_code(code):
+    # Use regular expression to remove leading zeros from the numeric part
+    return re.sub(r'(\D+)-?0*(\d+)', r'\1-\2', code)
 
 def getletterinfo(query):
     url = f"{javlibrary_search_url}?q={query}&f=all"
@@ -42,7 +45,8 @@ def getletterinfo(query):
         print(f"链接: {href_value}, 标签: {strong_text}, 内容: {video_title}")
 
     for info in serachlist:
-        if info.get("strong_text").lower() == query.lower():
+        if normalize_code(info.get("strong_text")).lower() == normalize_code(query).lower():
+            print(info["href_value"])
             r1 = requests.get(info["href_value"])
 
             soup1 = BeautifulSoup(r1.text, 'html.parser')
@@ -115,6 +119,4 @@ def getletterinfo(query):
             image_url = soup1.find('img', class_='video-cover')['src']
             videoinfo['image_url'] = image_url if image_url.startswith(
                 'http') else f"https://c0.jdbstatic.com{image_url}"
-
-            print(videoinfo)
             return videoinfo
