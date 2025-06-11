@@ -1,13 +1,12 @@
-import os
 import re
 import shutil
 import filecmp
 import requests
-from bs4 import BeautifulSoup
-import javlibrary
 import javdb
 import glob
 import time
+import os
+import stat
 
 def find_alpha_num_combinations(s):
     # Remove everything before and including '@'
@@ -47,10 +46,23 @@ def download_picture(image_url, actor_folder):
         print(f"{image_url} 图片下载失败。")
 
 def sanitize_filename(filename):
+    # 特殊字符
     filename = re.sub(r'[\\/*?:"<>|]', "", filename)
+    # 换行符
     filename = filename.replace('\n', '').replace('\r', '')
-    filename = filename[:255]
+    # 截断
+    max_length = 50
+    filename = filename[:max_length]
+    # 截断空格
+    filename = filename.rstrip()
     return filename
+
+def create_safe_filename(full_path, video_title):
+    # 清理文件名
+    safe_title = sanitize_filename(video_title)
+    # 创建完整路径
+    new_name = os.path.join(full_path, safe_title + '.mp4')
+    return new_name
 
 def move_and_merge_folders(source_folder, destination_folder):
     if not os.path.exists(destination_folder):
@@ -106,13 +118,55 @@ def move_and_merge_folders(source_folder, destination_folder):
         except Exception as e:
             print(f"Error removing source folder {source_folder}: {e}")
 
+def get_non_hidden_non_readonly_items(directory):
+    items = []
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+
+        # Check if the item is not hidden
+        if not item.startswith('.') and not item.startswith('$') and not item.startswith('VR') and not item.startswith('Config') and not item.startswith('System') and not item.startswith('Extera'):
+            # Get the item's mode
+            item_mode = os.stat(item_path).st_mode
+
+            # Check if the item is not read-only
+            if not (item_mode & stat.S_IWRITE == 0):
+                items.append(item)
+
+    return items
+
 dir_path = r"D:\\"
-fanhao_dir_paths = os.listdir(dir_path)
+file_paths = get_non_hidden_non_readonly_items(dir_path)
+
+#
+# destination_VR_folder = os.path.join(dir_path, "VR")
+# if not os.path.exists(destination_VR_folder):
+#     os.makedirs(destination_VR_folder)
+#
+# for person_item in file_paths:
+#     print(person_item)
+#     person_path = os.path.join(dir_path, person_item)
+#     for item in os.listdir(person_path):
+#         if not 'VR' in item:
+#             continue
+#         print(item)
+#
+#         item_path = os.path.join(person_path, item)
+#         if os.path.isdir(item_path):
+#             destination_person_folder = os.path.join(destination_VR_folder, person_item)
+#             if not os.path.exists(destination_person_folder):
+#                 os.makedirs(destination_person_folder)
+#             destination_subfolder = os.path.join(destination_VR_folder, person_item, item)
+#             move_and_merge_folders(item_path, destination_subfolder)
+#             print(f"Moved {item_path} to {destination_subfolder}")
+#
+#
+
+
 extera_path = os.path.join(dir_path, "Extera")
 if not os.path.exists(extera_path):
     os.makedirs(extera_path)
 
-for item in fanhao_dir_paths:
+for item in file_paths:
     full_path = os.path.join(dir_path, item)
     if os.path.isfile(full_path):
         if full_path.lower().endswith('.mp4'):
@@ -130,13 +184,16 @@ for item in fanhao_dir_paths:
     mark = find_alpha_num_combinations(item)
     if mark is None:
         break
+    # List of items to filter out
+    filter_list = ["kfa-11", "SIS-001", "hhd-800", "com-300", "PrestigePremium"]
 
+    # Filter out unwanted items from mark
+    filtered_mark = [letter for letter in mark if letter not in filter_list]
 
-    for letter in mark:
-        if letter in [ "kfa-11","SIS-001", "hhd-800", "com-300","PrestigePremium"]:
-            print(f"过滤 {letter}")
-            continue
-        print(f"entries：{full_path}  mark：{mark}")
+    if filtered_mark is None:
+        break
+
+    for letter in filtered_mark:
         time.sleep(5)
         try:
             videoinfo = javdb.getletterinfo(letter)
@@ -153,14 +210,15 @@ for item in fanhao_dir_paths:
         if not video_title:
             print("找不到title")
             break
+
         video_title = sanitize_filename(video_title)
 
         actor_names = videoinfo.get("actor_names", [])
         if not actor_names:
             print("没有演员")
-            continue
-
-        actor_name = actor_names[0]
+            actor_name ="noactor"
+        else:
+            actor_name = actor_names[0]
         actor_folder = os.path.join(dir_path, actor_name)
         if not os.path.exists(actor_folder):
             os.makedirs(actor_folder)
@@ -198,6 +256,8 @@ for item in fanhao_dir_paths:
             for key, value in videoinfo.items():
                 file.write(f"{key}: {value}\n")
         print("信息已写入info.txt文件。")
+
+        break
 
     if os.path.exists(full_path):
         print(f"没有成功整理，移动文件夹 {full_path} 到extra {extera_path}")
