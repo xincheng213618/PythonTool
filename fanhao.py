@@ -9,26 +9,41 @@ import os
 import stat
 
 def find_alpha_num_combinations(s):
+    print (s)
+    match = re.match(r'^(\d{6}_\d{2})-[0-9A-Za-z]+$', s)
+    if match:
+        return [match.group(1)]
+    # 数字+英文-数字，直接原样返回
+    pattern_num_eng_num_ = r'^\d+[A-Za-z]+-\d+$'
+    if re.match(pattern_num_eng_num_, s):
+        return [s]
+
+    # 优先处理 FC2 变式
+    pattern_fc2 = r'(fc2)[\s\-]*([a-z]*)[\s\-]*(\d+)'
+    match = re.search(pattern_fc2, s, re.IGNORECASE)
+    if match:
+        return [f"FC2-{int(match.group(3)):07d}"]  # FC2-2195395 补7位零，如需3位可改为:03d
+
+    # 标准字母-数字格式，数字补零到三位
+    match = re.search(r'([A-Za-z]+)-(\d+)', s)
+    if match:
+        return [f"{match.group(1).upper()}-{int(match.group(2)):03d}"]
+
+
+
     # Remove everything before and including '@'
     s = re.sub(r'.*@', '', s)
 
-    # Pattern for 6 digits followed by a dash and 3 digits
-    pattern1 = r"(\d{6}-\d{3})"
-    matches = re.findall(pattern1, s.lower())
-    if len(matches) == 1:
-        return matches
-
-    # Pattern for FC2-PPV- or FC2 PPV followed by digits
-    pattern2 = r"(FC2)[\s-]*(PPV)[\s-]*(\d+)"
-    match = re.search(pattern2, s.lower())
+    # 6位数字-3位数字，后半部分补零到三位
+    pattern1 = r"(\d{6})-(\d{1,3})"
+    match = re.search(pattern1, s)
     if match:
-        result = match.group(1) + '-' + match.group(2) + '-' + match.group(3)
-        return [result]
+        return [f"{match.group(1)}-{int(match.group(2)):03d}"]
 
-    # Pattern for letters followed by numbers, separated by non-word characters
+    # 字母+数字组合，数字补零到三位
     pattern3 = r'([A-Za-z]+)[^\w]*(\d+)'
     matches = re.findall(pattern3, s)
-    separated = ['{}-{}'.format(match[0], str(int(match[1]))) for match in matches]
+    separated = ['{}-{:03d}'.format(m[0].upper(), int(m[1])) for m in matches]
 
     return separated
 
@@ -51,7 +66,7 @@ def sanitize_filename(filename):
     # 换行符
     filename = filename.replace('\n', '').replace('\r', '')
     # 截断
-    max_length = 50
+    max_length = 100
     filename = filename[:max_length]
     # 截断空格
     filename = filename.rstrip()
@@ -137,31 +152,6 @@ def get_non_hidden_non_readonly_items(directory):
 dir_path = r"D:\\"
 file_paths = get_non_hidden_non_readonly_items(dir_path)
 
-#
-# destination_VR_folder = os.path.join(dir_path, "VR")
-# if not os.path.exists(destination_VR_folder):
-#     os.makedirs(destination_VR_folder)
-#
-# for person_item in file_paths:
-#     print(person_item)
-#     person_path = os.path.join(dir_path, person_item)
-#     for item in os.listdir(person_path):
-#         if not 'VR' in item:
-#             continue
-#         print(item)
-#
-#         item_path = os.path.join(person_path, item)
-#         if os.path.isdir(item_path):
-#             destination_person_folder = os.path.join(destination_VR_folder, person_item)
-#             if not os.path.exists(destination_person_folder):
-#                 os.makedirs(destination_person_folder)
-#             destination_subfolder = os.path.join(destination_VR_folder, person_item, item)
-#             move_and_merge_folders(item_path, destination_subfolder)
-#             print(f"Moved {item_path} to {destination_subfolder}")
-#
-#
-
-
 extera_path = os.path.join(dir_path, "Extera")
 if not os.path.exists(extera_path):
     os.makedirs(extera_path)
@@ -189,6 +179,9 @@ for item in file_paths:
 
     # Filter out unwanted items from mark
     filtered_mark = [letter for letter in mark if letter not in filter_list]
+    print(filtered_mark)
+
+
 
     if filtered_mark is None:
         break
@@ -200,7 +193,10 @@ for item in file_paths:
         except:
             print("超时，等待中")
             time.sleep(60)
-            videoinfo = javdb.getletterinfo(letter)
+            try:
+                videoinfo = javdb.getletterinfo(letter)
+            except:
+                break
         print(videoinfo)
 
         if not videoinfo:
