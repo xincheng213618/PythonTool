@@ -50,12 +50,18 @@ class FileMover:
         except OSError:
             pass
 
-    def robocopy_move(self,src, dst):
-        # /MOVE 表示移动，/E 包含空目录
-        cmd = ["robocopy", src, dst, "/MOVE", "/E"]
-        result = subprocess.run(cmd, shell=True)
-        if result.returncode >= 8:
-            raise RuntimeError("robocopy failed with code %d" % result.returncode)
+    def robocopy_move(self, src, dst):
+        if os.path.isfile(src):
+            # src 是文件，直接用 shutil.move
+            shutil.move(src, dst)
+        elif os.path.isdir(src):
+            # src 是目录，使用 robocopy
+            cmd = ["robocopy", src, dst, "/MOVE", "/E"]
+            result = subprocess.run(cmd, shell=True)
+            if result.returncode >= 8:
+                raise RuntimeError("robocopy failed with code %d" % result.returncode)
+        else:
+            raise ValueError("src does not exist or is not a file/directory")
 
     def move_diskpair(self, src_root, dst_root):
         for folder_name in os.listdir(src_root):
@@ -86,6 +92,8 @@ class FileMover:
                 future.result()
 
 if __name__ == "__main__":
-    root_dirs = ["G:\\", "F:\\","O:\\[珍藏]","O:\\","D:\\"]
+    # root_dirs = ["O:\\[珍藏1]","G:\\", "F:\\","O:\\[珍藏]","O:\\","D:\\"]
+    root_dirs = ["O:\\[珍藏1]","G:\\", "F:\\","O:\\[珍藏]","O:\\"]
+
     file_mover = FileMover(root_dirs)
     file_mover.move_files_diskpair_parallel()

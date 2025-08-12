@@ -45,18 +45,16 @@ def getletterinfo(query):
         print(f"链接: {href_value}, 标签: {strong_text}, 内容: {video_title}")
 
     for info in serachlist:
-        if normalize_code(info.get("strong_text")).lower() == normalize_code(query).lower():
+
+        if (normalize_code(query).lower() in normalize_code(info.get("strong_text")).lower()) or  (normalize_code(info.get("strong_text")).lower() in normalize_code(query).lower() ) :
             print(info["href_value"])
-            r1 = requests.get(info["href_value"])
+            r1 = requests.get(info["href_value"], headers=headers, proxies=proxies)
 
             soup1 = BeautifulSoup(r1.text, 'html.parser')
-
             # 提取信息并存储到 videoinfo 字典中
             videoinfo = {}
-
             # 定位到h2元素
             h2_tag = soup1.find('h2', class_='title is-4')
-
             # 从h2元素获取所有下一级的strong元素
             strong_tags = h2_tag.find_all('strong')
 

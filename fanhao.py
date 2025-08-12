@@ -139,7 +139,7 @@ def get_non_hidden_non_readonly_items(directory):
         item_path = os.path.join(directory, item)
 
         # Check if the item is not hidden
-        if not item.startswith('.') and not item.startswith('$') and not item.startswith('VR') and not item.startswith('Config') and not item.startswith('System') and not item.startswith('Extera'):
+        if not item.startswith('.') and not item.startswith('$')  and not item.startswith('Config') and not item.startswith('System') and not item.startswith('Extera') and not item =='VR' and not item =="noactor":
             # Get the item's mode
             item_mode = os.stat(item_path).st_mode
 
@@ -149,7 +149,7 @@ def get_non_hidden_non_readonly_items(directory):
 
     return items
 
-dir_path = r"D:\\"
+dir_path = r"V:\\AV"
 file_paths = get_non_hidden_non_readonly_items(dir_path)
 
 extera_path = os.path.join(dir_path, "Extera")
@@ -157,6 +157,14 @@ if not os.path.exists(extera_path):
     os.makedirs(extera_path)
 
 for item in file_paths:
+    basename = os.path.basename(item)
+    prefix = ""
+    # 检查是否以 [X]. 开头
+    match = re.match(r'(\[[^\[\]]+\]\.)', basename)
+    if match:
+        prefix = match.group(1)
+        print(item ,"prefix:", prefix)
+
     full_path = os.path.join(dir_path, item)
     if os.path.isfile(full_path):
         if full_path.lower().endswith('.mp4'):
@@ -207,19 +215,17 @@ for item in file_paths:
             print("找不到title")
             break
 
+        is_vr = "VR" in letter.upper()
         video_title = sanitize_filename(video_title)
-
         actor_names = videoinfo.get("actor_names", [])
-        if not actor_names:
-            print("没有演员")
-            actor_name ="noactor"
+        actor_name = actor_names[0] if actor_names else "noactor"
+        if is_vr:
+            actor_folder = os.path.join(dir_path, "VR", actor_name)
         else:
-            actor_name = actor_names[0]
-        actor_folder = os.path.join(dir_path, actor_name)
-        if not os.path.exists(actor_folder):
-            os.makedirs(actor_folder)
+            actor_folder = os.path.join(dir_path, actor_name)
+        os.makedirs(actor_folder, exist_ok=True)
 
-        video_folder = os.path.join(actor_folder, video_title)
+        video_folder = os.path.join(actor_folder, prefix+video_title)
 
         mp4_files = glob.glob(os.path.join(full_path, '*.mp4'))
         if len(mp4_files) == 1:
