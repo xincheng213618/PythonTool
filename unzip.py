@@ -6,17 +6,11 @@ import os
 import subprocess
 import shutil
 import argparse
-import json
 import csv
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-dir_path = r'H:\新建文件夹\341'  # 填写你的.rar文件路径
-cache_path = r"D:\Cache"
-r_path = r"H:\新建文件夹 (3)"
-password = 'www.5280bt.net'  # 填写RAR文件的密码
-config_file = 'config.json'
-
+# 已移除 config_file 及相关配置持久化逻辑，只保留 CSV 映射
 
 def extract_7z_with_password(sevenz_filename, file_directory, password):
     with py7zr.SevenZipFile(sevenz_filename, mode='r', password=password) as z:
@@ -35,7 +29,7 @@ def extract_with_winrar_all(zip_file_path, destination_folder, password):
 
 def zip_with_winrar_all(folder_path):
     folder_name = os.path.basename(folder_path)
-    target_r_path = r_path if os.path.exists(r_path) else os.path.dirname(folder_path)
+    target_r_path = output_path if os.path.exists(output_path) else os.path.dirname(folder_path)
     rar_file_name = os.path.join(target_r_path, f"{folder_name}.rar")
     command = [r'C:\Program Files\WinRAR\WinRAR.exe', 'a', '-ibck', '-r', '-ep1', rar_file_name, folder_path]
     print("Running command:", ' '.join(command))
@@ -63,14 +57,14 @@ def extract_with_winrar(zip_file_path, password):
     extract_with_winrar_all(zip_file_path, file_directory, password)
 
 
-def unzip_dir(dir_path, password):
-    all_items = os.listdir(dir_path)
+def unzip_dir(input_path, password):
+    all_items = os.listdir(input_path)
     sevenz_files = [item for item in all_items if item.endswith('.7z')]
 
     # 并行解压 7z 文件
     with ThreadPoolExecutor(max_workers=8) as executor:  # 你可以调整 max_workers 数目
         future_to_7z = {
-            executor.submit(handle_7z_file, os.path.join(dir_path, sevenz_file), password): sevenz_file
+            executor.submit(handle_7z_file, os.path.join(input_path, sevenz_file), password): sevenz_file
             for sevenz_file in sevenz_files
         }
         for future in as_completed(future_to_7z):
@@ -137,22 +131,14 @@ def process_and_compress_dir(directory_path):
     shutil.rmtree(directory_path)
 
 
-def read_config():
-    if os.path.exists(config_file):
-        with open(config_file, 'r') as f:
-            return json.load(f)
-    return {}
-
-
-def write_config(config):
-    with open(config_file, 'w') as f:
-        json.dump(config, f, indent=4)
-
-
 def load_csv_to_dict(file_path):
     data_dict = {}
+    if not os.path.exists(file_path):
+        print(f"CSV文件不存在: {file_path}")
+        return data_dict
     with open(file_path, mode='r', encoding='utf-8') as csvfile:
-        csvreader = csv.reader(csvfile)
+        import csv as _csv
+        csvreader = _csv.reader(csvfile)
         for row in csvreader:
             if len(row) < 5:  # 修正索引越界
                 continue
@@ -174,51 +160,52 @@ def find_gril_nums_path(data_dict, num):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process a directory path.")
-    parser.add_argument('-dir_path', "-i",
-                        help='The path to the directory.')
-    parser.add_argument('-r_path', "-o",
-                        help='The path to the directory.')
-    parser.add_argument('--delete-source', action='store_true', help='Delete source dir_path after extraction.')
+    parser.add_argument('-i', '--input_path', default="H:\\538", help='输入目录（input directory）')
+    parser.add_argument('-o', '--output_path', help='输出目录（output directory）')
+    parser.add_argument('--delete-source', action='store_true', help='解压后删除源目录')
+    parser.add_argument('-p', '--password', default="www.5280bt.net")
+
     args = parser.parse_args()
     print(args)
-    config = read_config()
-    dir_path = args.dir_path
-    r_path = args.r_path
+
+    input_path = args.input_path
+    output_path = args.output_path
+    password = args.password
+
+    # 默认缓存目录为桌面Cache
+    desktop = os.path.join(os.path.expanduser("~"), 'Desktop')
+    cache_path = os.path.join(desktop, 'Cache', os.path.basename(input_path))
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
 
     file_path = 'artfilepath.csv'
     data_dict = load_csv_to_dict(file_path)
-    print(data_dict)
-    file_name = os.path.basename(dir_path)
+    file_name = os.path.basename(input_path)
     print(file_name)
-    if r_path is None and dir_path in config:
-        r_path = config[dir_path]
-    elif file_name.isdigit() and (0 <= int(file_name) <= 1000):
-        print(file_name)
-        r_path = find_gril_nums_path(data_dict, int(file_name))
-    elif r_path is None:
-        parser.error("r_path is required.")
-    config[dir_path] = r_path
-    write_config(config)
 
-    print("dir_path: " + str(dir_path))
-    if not os.path.exists(cache_path):
-        cache_path = os.path.join(os.path.expanduser("~"), 'Desktop') + "\Cache"
-        if not os.path.exists(cache_path):
-            os.makedirs(cache_path)
-    cache_path = os.path.join(cache_path, os.path.basename(dir_path))
-    if not os.path.exists(cache_path):
-        os.makedirs(cache_path)
+    # 仅依赖 CSV：如果未提供输出目录且目录名是数字则尝试映射
+    if output_path is None:
+        if file_name.isdigit() and (0 <= int(file_name) <= 1000):
+            mapped = find_gril_nums_path(data_dict, int(file_name))
+            if mapped:
+                output_path = mapped
+            else:
+                parser.error(f"CSV 中未找到对应编号 {file_name} 的输出路径")
+        else:
+            parser.error("未指定 -o 且文件夹名不是有效数字编号，无法确定输出目录")
+
+    print("input_path: " + str(input_path))
     print("cache_path:" + cache_path)
-    print("r_path:" + r_path)
-    if not os.path.exists(r_path):
-        os.makedirs(r_path)
+    print("r_path:" + output_path)
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
-    unzip_dir(dir_path, password)
+    unzip_dir(input_path, password)
 
-    entries = os.listdir(dir_path)
-    directories = [entry for entry in entries if os.path.isdir(os.path.join(dir_path, entry))]
+    entries = os.listdir(input_path)
+    directories = [entry for entry in entries if os.path.isdir(os.path.join(input_path, entry))]
     for directory in directories:
-        directory_path = os.path.join(dir_path, directory)
+        directory_path = os.path.join(input_path, directory)
         print(directory_path)
         unzip_dir(directory_path, password)
 
@@ -229,11 +216,11 @@ if __name__ == '__main__':
     else:
         print(f"跳过删除cache_path: {cache_path}")
     if args.delete_source:
-        print("解压完成，正在清理wancheg文件夹:" + dir_path)
-        # 安全删除dir_path
-        if os.path.exists(dir_path) and len(dir_path) > 10 and os.path.basename(dir_path) != '' and dir_path != '/' and dir_path != 'C:\\':
-            shutil.rmtree(dir_path)
+        print("解压完成，正在清理wancheg文件夹:" + input_path)
+        # 安全删除input_path
+        if os.path.exists(input_path) and len(input_path) > 10 and os.path.basename(input_path) != '' and input_path != '/' and input_path != 'C:\\':
+            shutil.rmtree(input_path)
         else:
-            print(f"跳过删除dir_path: {dir_path}")
+            print(f"跳过删除input_path: {input_path}")
     else:
         print("未启用--delete-source, 跳过删除源目录。")
