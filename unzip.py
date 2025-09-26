@@ -93,12 +93,17 @@ def handle_7z_file(sevenz_file_path, password):
     all_items1 = os.listdir(tempcache)
     zip_files = [item for item in all_items1 if item.endswith('.zip')]
 
-    # 并行解压 zip 文件
+    # 并行解压 zip 文件，每个zip解压到独立子目录
     with ThreadPoolExecutor(max_workers=8) as executor:
-        future_to_zip = {
-            executor.submit(handle_zip_file, os.path.join(tempcache, zip_file), password, tempcache): zip_file
-            for zip_file in zip_files
-        }
+        future_to_zip = {}
+        for zip_file in zip_files:
+            zip_file_path = os.path.join(tempcache, zip_file)
+            zip_name_no_ext = os.path.splitext(zip_file)[0]
+            zip_extract_dir = os.path.join(tempcache, zip_name_no_ext)
+            if not os.path.exists(zip_extract_dir):
+                os.makedirs(zip_extract_dir)
+            future = executor.submit(handle_zip_file, zip_file_path, password, zip_extract_dir)
+            future_to_zip[future] = zip_file
         for future in as_completed(future_to_zip):
             zip_file = future_to_zip[future]
             try:
@@ -106,20 +111,19 @@ def handle_7z_file(sevenz_file_path, password):
             except Exception as exc:
                 print(f"{zip_file} generated an exception: {exc}")
 
-
     print("正在删除handle_7z_file" + sevenz_file_path)
     os.remove(sevenz_file_path)
     print("正在删除htempcache" + tempcache)
     shutil.rmtree(tempcache)
 
-def handle_zip_file(zip_file_path, password, tempcache):
-    print("正在解压" + zip_file_path)
-    extract_with_winrar(zip_file_path, password)
-    entries = os.listdir(tempcache)
-    directories = [entry for entry in entries if os.path.isdir(os.path.join(tempcache, entry))]
+def handle_zip_file(zip_file_path, password, extract_dir):
+    print("正在解压" + zip_file_path + " 到 " + extract_dir)
+    extract_with_winrar_all(zip_file_path, extract_dir, password)
+    entries = os.listdir(extract_dir)
+    directories = [entry for entry in entries if os.path.isdir(os.path.join(extract_dir, entry))]
 
     for directory in directories:
-        process_and_compress_dir(os.path.join(tempcache, directory));
+        process_and_compress_dir(os.path.join(extract_dir, directory))
 
     print("正在删除handle_zip_file" + zip_file_path)
     os.remove(zip_file_path)
@@ -150,7 +154,7 @@ def load_csv_to_dict(file_path):
     with open(file_path, mode='r', encoding='utf-8') as csvfile:
         csvreader = csv.reader(csvfile)
         for row in csvreader:
-            if len(row) < 2:
+            if len(row) < 5:  # 修正索引越界
                 continue
             entry_title = row[2]
             path = row[4]
@@ -174,6 +178,7 @@ if __name__ == '__main__':
                         help='The path to the directory.')
     parser.add_argument('-r_path', "-o",
                         help='The path to the directory.')
+    parser.add_argument('--delete-source', action='store_true', help='Delete source dir_path after extraction.')
     args = parser.parse_args()
     print(args)
     config = read_config()
@@ -218,6 +223,17 @@ if __name__ == '__main__':
         unzip_dir(directory_path, password)
 
     print("解压完成，正在清理缓存文件夹:" + cache_path)
-    shutil.rmtree(cache_path)
-    print("解压完成，正在清理wancheg文件夹:" + dir_path)
-    shutil.rmtree(dir_path)
+    # 安全删除cache_path
+    if os.path.exists(cache_path) and len(cache_path) > 10 and 'Cache' in cache_path:
+        shutil.rmtree(cache_path)
+    else:
+        print(f"跳过删除cache_path: {cache_path}")
+    if args.delete_source:
+        print("解压完成，正在清理wancheg文件夹:" + dir_path)
+        # 安全删除dir_path
+        if os.path.exists(dir_path) and len(dir_path) > 10 and os.path.basename(dir_path) != '' and dir_path != '/' and dir_path != 'C:\\':
+            shutil.rmtree(dir_path)
+        else:
+            print(f"跳过删除dir_path: {dir_path}")
+    else:
+        print("未启用--delete-source, 跳过删除源目录。")

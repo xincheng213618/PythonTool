@@ -92,8 +92,12 @@ class FileMover:
                 future.result()
 
 if __name__ == "__main__":
-    # root_dirs = ["O:\\[珍藏1]","G:\\", "F:\\","O:\\[珍藏]","O:\\","D:\\"]
-    root_dirs = ["O:\\[珍藏1]","G:\\", "F:\\","O:\\[珍藏]","O:\\"]
+    root_dirs = ["O:\\[珍藏1]","G:\\", "F:\\","O:\\[珍藏]","O:\\","D:\\"]
+
+    file_mover = FileMover(root_dirs)
+    file_mover.move_files_diskpair_parallel()
+
+    root_dirs = ["V:\\[A1]","V:\\[A]","V:\\AV\\VR","D:\\VR"]
 
     file_mover = FileMover(root_dirs)
     file_mover.move_files_diskpair_parallel()
