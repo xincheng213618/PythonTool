@@ -8,9 +8,31 @@ import shutil
 import argparse
 import csv
 import re
+import time
+import uuid
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from translatesrt import translator
+
+
 # 已移除 config_file 及相关配置持久化逻辑，只保留 CSV 映射
+
+def open_output_folder(path: str):
+    try:
+        if not os.path.isdir(path):
+            print(f"输出目录不存在: {path}")
+            return
+        if os.name == 'nt':  # Windows
+            os.startfile(path)  # type: ignore[attr-defined]
+        elif sys.platform == 'darwin':  # macOS
+            subprocess.Popen(['open', path])
+        else:  # Linux/Unix
+            subprocess.Popen(['xdg-open', path])
+        print(f"已打开输出目录: {path}")
+    except Exception as e:
+        print(f"打开输出目录失败: {e}")
+
 
 def extract_7z_with_password(sevenz_filename, file_directory, password):
     with py7zr.SevenZipFile(sevenz_filename, mode='r', password=password) as z:
@@ -162,7 +184,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process a directory path.")
     parser.add_argument('-i', '--input_path', default="H:\\538", help='输入目录（input directory）')
     parser.add_argument('-o', '--output_path', help='输出目录（output directory）')
-    parser.add_argument('--delete-source', action='store_true', help='解压后删除源目录')
+    parser.add_argument('--delete-source',default=True, action='store_true', help='解压后删除源目录')
     parser.add_argument('-p', '--password', default="www.5280bt.net")
 
     args = parser.parse_args()
@@ -172,9 +194,11 @@ if __name__ == '__main__':
     output_path = args.output_path
     password = args.password
 
-    # 默认缓存目录为桌面Cache
+    # 默认缓存目录为桌面Cache，添加唯一后缀（时间戳+随机6位）避免并发冲突
     desktop = os.path.join(os.path.expanduser("~"), 'Desktop')
-    cache_path = os.path.join(desktop, 'Cache', os.path.basename(input_path))
+    unique_suffix = f"{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    cache_dir_name = f"{os.path.basename(input_path)}_{unique_suffix}" if os.path.basename(input_path) else unique_suffix
+    cache_path = os.path.join(desktop, 'Cache', cache_dir_name)
     if not os.path.exists(cache_path):
         os.makedirs(cache_path)
 
@@ -224,3 +248,6 @@ if __name__ == '__main__':
             print(f"跳过删除input_path: {input_path}")
     else:
         print("未启用--delete-source, 跳过删除源目录。")
+
+    # 完成后打开输出目录
+    open_output_folder(output_path)
