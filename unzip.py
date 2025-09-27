@@ -183,8 +183,8 @@ def is_numeric_dir_name(name: str) -> bool:
     return name.isdigit() and 0 <= int(name) <= 1000
 
 
-def process_single_folder(single_input_path: str, mapped_output_path: str, password: str, delete_source: bool):
-    """处理单个数字目录：建立独立 cache, 设置全局 output_path/cache_path, 执行解压与清理。"""
+def process_single_folder(single_input_path: str, mapped_output_path: str, password: str):
+    """处理单个数字目录：建立独立 cache, 设置全局 output_path/cache_path, 执行解压与清理并删除源目录。"""
     global output_path, cache_path
     output_path = mapped_output_path  # 供 zip_with_winrar_all 使用
 
@@ -192,17 +192,15 @@ def process_single_folder(single_input_path: str, mapped_output_path: str, passw
     desktop = os.path.join(os.path.expanduser("~"), 'Desktop')
     unique_suffix = f"{int(time.time())}_{uuid.uuid4().hex[:6]}"
     cache_dir_name = f"{os.path.basename(single_input_path)}_{unique_suffix}"
-    cache_path = os.path.join(desktop, cache_dir_name)
+    cache_path = os.path.join(desktop, 'Cache', cache_dir_name)
     os.makedirs(cache_path, exist_ok=True)
 
     print(f"开始处理目录: {single_input_path} -> {output_path}")
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    # 一级目录中的 7z
     unzip_dir(single_input_path, password)
 
-    # 继续遍历它内部的子目录再解一次（原逻辑保留）
     entries = os.listdir(single_input_path)
     directories = [entry for entry in entries if os.path.isdir(os.path.join(single_input_path, entry))]
     for directory in directories:
@@ -210,16 +208,16 @@ def process_single_folder(single_input_path: str, mapped_output_path: str, passw
         print(directory_path)
         unzip_dir(directory_path, password)
 
-    # 删除缓存
     print("解压完成，正在清理缓存文件夹:" + cache_path)
     if os.path.exists(cache_path) and len(cache_path) > 10 and 'Cache' in cache_path:
         shutil.rmtree(cache_path)
 
-    # 删除源目录（可选）
-    if delete_source:
-        print("解压完成，正在清理源目录:" + single_input_path)
-        if os.path.exists(single_input_path) and len(single_input_path) > 10 and os.path.basename(single_input_path) != '' and single_input_path not in ['/', 'C:\\']:
-            shutil.rmtree(single_input_path)
+    # 始终删除源目录（安全校验）
+    print("解压完成，正在清理源目录:" + single_input_path)
+    if os.path.exists(single_input_path) and len(single_input_path) > 10 and os.path.basename(single_input_path) != '' and single_input_path not in ['/', 'C:\\']:
+        shutil.rmtree(single_input_path)
+    else:
+        print(f"跳过删除源目录: {single_input_path}")
 
     open_output_folder(output_path)
 
@@ -228,7 +226,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process a directory path.")
     parser.add_argument('-i', '--input_path', default="H:\\", help='输入目录（input directory）')
     parser.add_argument('-o', '--output_path', help='输出目录（output directory）')
-    parser.add_argument('--delete-source', default=True, action='store_true', help='解压后删除源目录')
     parser.add_argument('-p', '--password', default="www.5280bt.net")
 
     args = parser.parse_args()
@@ -246,24 +243,21 @@ if __name__ == '__main__':
 
     file_name = os.path.basename(os.path.normpath(input_path))
 
-    # 检测批量模式：输入目录下存在多个数字子目录 且 当前目录名本身不是纯数字处理对象
     numeric_subdirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d)) and is_numeric_dir_name(d)]
     batch_mode = not is_numeric_dir_name(file_name) and len(numeric_subdirs) > 0 and output_path is None
 
     if batch_mode:
         print(f"检测到批量模式，发现 {len(numeric_subdirs)} 个数字子目录。")
-        # 按数字顺序处理
         for d in sorted(numeric_subdirs, key=lambda x: int(x)):
             mapped = find_gril_nums_path(data_dict, int(d))
             if not mapped:
                 print(f"跳过 {d}：CSV 未找到映射。")
                 continue
             single_input = os.path.join(input_path, d)
-            process_single_folder(single_input, mapped, password, args.delete_source)
+            process_single_folder(single_input, mapped, password)
         print("批量任务完成。")
         sys.exit(0)
 
-    # 非批量（单目录）逻辑，与原先类似
     if output_path is None:
         if is_numeric_dir_name(file_name):
             mapped = find_gril_nums_path(data_dict, int(file_name))
@@ -274,11 +268,10 @@ if __name__ == '__main__':
         else:
             parser.error("未指定 -o 且文件夹名不是有效数字编号，无法确定输出目录")
 
-    # 为单目录处理创建独立 cache（沿用之前命名方式）
     desktop = os.path.join(os.path.expanduser("~"), 'Desktop')
     unique_suffix = f"{int(time.time())}_{uuid.uuid4().hex[:6]}"
     cache_dir_name = f"{os.path.basename(input_path)}_{unique_suffix}" if os.path.basename(input_path) else unique_suffix
-    cache_path = os.path.join(desktop, cache_dir_name)
+    cache_path = os.path.join(desktop, 'Cache', cache_dir_name)
     os.makedirs(cache_path, exist_ok=True)
 
     print("input_path: " + str(input_path))
@@ -302,13 +295,11 @@ if __name__ == '__main__':
     else:
         print(f"跳过删除cache_path: {cache_path}")
 
-    if args.delete_source:
-        print("解压完成，正在清理源目录:" + input_path)
-        if os.path.exists(input_path) and len(input_path) > 10 and os.path.basename(input_path) != '' and input_path not in ['/', 'C:\\']:
-            shutil.rmtree(input_path)
-        else:
-            print(f"跳过删除input_path: {input_path}")
+    # 始终删除输入源目录（安全校验）
+    print("解压完成，正在清理源目录:" + input_path)
+    if os.path.exists(input_path) and len(input_path) > 10 and os.path.basename(input_path) != '' and input_path not in ['/', 'C:\\']:
+        shutil.rmtree(input_path)
     else:
-        print("未启用--delete-source, 跳过删除源目录。")
+        print(f"跳过删除input_path: {input_path}")
 
     open_output_folder(output_path)
